@@ -22,12 +22,13 @@ resource "google_compute_network" "vpc_network" {
 }
 
 resource "google_cloud_run_service" "default" {
-  name = "uptime-monitor-gcr"
+  name     = "uptime-monitor-gcr"
+  location = "us-east4"
 
   template {
     spec {
       containers {
-        image = "us-docker.pkg.dev/cloudrun/container/uptime-monitor"
+        image = "us-docker.pkg.dev/cloudrun/container/hello"
       }
     }
   }
@@ -39,10 +40,15 @@ resource "google_cloud_run_service" "default" {
 }
 
 resource "google_cloudbuild_trigger" "tf-trigger" {
+  name            = "uptime-monitor-main"
+  location        = "global"
+  service_account = "projects/englander-suite/serviceAccounts/755712906263-compute@developer.gserviceaccount.com"
   github {
     owner = "karstenenglander"
     name  = "uptime-monitor"
-    push { branch = "^main$" }
+    push {
+      branch = "^main$"
+    }
   }
   filename = "cloudbuild.yaml"
 }
