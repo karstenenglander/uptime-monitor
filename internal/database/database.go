@@ -2,23 +2,32 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"net"
 
 	"cloud.google.com/go/cloudsqlconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func() error, error){
+func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func() error, error) {
 	// Configure the driver to connect to the database
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		/* handle error */
+		err := fmt.Errorf("Connection not established. Config could not be parsed. Error: %w", err)
+		return nil, nil, err
 	}
 
 	// Create a new dialer with any options
 	d, err := cloudsqlconn.NewDialer(ctx, cloudsqlconn.WithIAMAuthN())
+	// call cleanup when you're done with the database connection
+	cleanup := func() error { return d.Close() }
+
 	if err != nil {
-		/* handle error */
+		if d != nil {
+			cleanup()
+		}
+		err := fmt.Errorf("Connection not established. Dialer could not be created. Error: %w", err)
+		return nil, nil, err
 	}
 
 	// Tell the driver to use the Cloud SQL Go Connector to create connections
@@ -29,12 +38,13 @@ func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func()
 	// Interact with the driver directly as you normally would
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
-		/* handle error */
+		if pool != nil {
+			pool.Close()
+		}
+		err := fmt.Errorf("Connection not established. Pool could not be created. Error: %w", err)
+		cleanup()
+		return nil, nil, err
 	}
-
-	// call cleanup when you're done with the database connection
-	cleanup := func() error { return d.Close() }
-	// ... etc
 
 	return pool, cleanup, nil
 }

@@ -9,11 +9,11 @@ import (
 
 func main() {
 	ctx := context.Background()
-	
+
 	cfg := config{
 		addr: ":8080",
-		db:   dbConfig{
-			dsn: os.Getenv("DATABASE_SERVICE_ACCOUNT"), 
+		db: dbConfig{
+			dsn: os.Getenv("DATABASE_SERVICE_ACCOUNT"),
 			icn: os.Getenv("ICN_STRING"),
 		},
 	}
@@ -28,7 +28,7 @@ func main() {
 
 	pool, cleanup, err := database.Connect(ctx, cfg.db.dsn, cfg.db.icn)
 	if err != nil {
-		slog.Error("Database has failed to connect", "error", err)
+		slog.Error("Database has failed to connect", "error:", err)
 		os.Exit(1)
 	}
 
@@ -36,7 +36,6 @@ func main() {
 	defer pool.Close()
 
 	logger.Info("Connected to database")
-
 
 	if err := api.run(api.mount()); err != nil {
 		slog.Error("Server has failed to start", "error", err)
