@@ -48,10 +48,17 @@ resource "google_cloud_run_service" "default" {
       service_account_name = google_service_account.service_account.email
       containers {
         image = "us-docker.pkg.dev/cloudrun/container/hello"
+        env {
+          name  = "ICN_STRING"
+          value = "englander-suite:us-east4:uptime-database-instance"
+        }
+        env {
+          name  = "DATABASE_SERVICE_ACCOUNT"
+          value = "user=uptime-monitor-runtime@englander-suite.iam dbname=uptime-database sslmode=disable"
+        }
       }
     }
   }
-
   traffic {
     percent         = 100
     latest_revision = true
@@ -135,4 +142,26 @@ resource "google_sql_user" "iam_service_account_user" {
   name     = trimsuffix(google_service_account.service_account.email, ".gserviceaccount.com")
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+}
+
+resource "google_cloud_tasks_queue" "uptime_queue" {
+  name     = "uptime-queue"
+  location = "us-east4"
+
+  rate_limits {
+    max_concurrent_dispatches = 3
+    max_dispatches_per_second = 2
+  }
+
+  retry_config {
+    max_attempts       = 5
+    max_retry_duration = "300s"
+    max_backoff        = "60s"
+    min_backoff        = "5s"
+    max_doublings      = 3
+  }
+
+  stackdriver_logging_config {
+    sampling_ratio = 1.0
+  }
 }
