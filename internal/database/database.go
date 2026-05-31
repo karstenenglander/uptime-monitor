@@ -13,7 +13,7 @@ func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func()
 	// Configure the driver to connect to the database
 	config, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		err := fmt.Errorf("Connection not established. Config could not be parsed. Error: %w", err)
+		err := fmt.Errorf("Config could not be parsed. Error: %w", err)
 		return nil, nil, err
 	}
 
@@ -26,7 +26,7 @@ func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func()
 		if d != nil {
 			cleanup()
 		}
-		err := fmt.Errorf("Connection not established. Dialer could not be created. Error: %w", err)
+		err := fmt.Errorf("Dialer could not be created. Error: %w", err)
 		return nil, nil, err
 	}
 
@@ -41,7 +41,7 @@ func Connect(ctx context.Context, dsn string, icn string) (*pgxpool.Pool, func()
 		if pool != nil {
 			pool.Close()
 		}
-		err := fmt.Errorf("Connection not established. Pool could not be created. Error: %w", err)
+		err := fmt.Errorf("Pool could not be created. Error: %w", err)
 		cleanup()
 		return nil, nil, err
 	}

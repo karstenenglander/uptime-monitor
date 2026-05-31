@@ -34,6 +34,22 @@ resource "google_project_iam_member" "runtime_cloudsql_instance_user" {
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
+resource "google_artifact_registry_repository_iam_member" "member" {
+  project    = google_artifact_registry_repository.docker-artifact-repository.project
+  location   = google_artifact_registry_repository.docker-artifact-repository.location
+  repository = google_artifact_registry_repository.docker-artifact-repository.id
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
+}
+
+resource "google_artifact_registry_repository" "docker-artifact-repository" {
+  location      = "us-east4"
+  repository_id = "docker-artifact-repository"
+  description   = "Docker Artifact Repository"
+  format        = "DOCKER"
+
+}
+
 resource "google_cloud_run_service" "default" {
   name     = "uptime-monitor-gcr"
   location = "us-east4"
