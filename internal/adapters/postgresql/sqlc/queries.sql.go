@@ -9,12 +9,28 @@ import (
 	"context"
 )
 
-const findSitesByID = `-- name: FindSitesByID :one
+const addSite = `-- name: AddSite :one
+INSERT INTO sites (name, url) VALUES ($1, $2) returning id
+`
+
+type AddSiteParams struct {
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
+
+func (q *Queries) AddSite(ctx context.Context, arg AddSiteParams) (int64, error) {
+	row := q.db.QueryRow(ctx, addSite, arg.Name, arg.Url)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const findSiteByID = `-- name: FindSiteByID :one
 SELECT id, name, url, created_at, polled_at FROM sites WHERE id = $1
 `
 
-func (q *Queries) FindSitesByID(ctx context.Context, id int64) (Site, error) {
-	row := q.db.QueryRow(ctx, findSitesByID, id)
+func (q *Queries) FindSiteByID(ctx context.Context, id int64) (Site, error) {
+	row := q.db.QueryRow(ctx, findSiteByID, id)
 	var i Site
 	err := row.Scan(
 		&i.ID,
@@ -57,4 +73,15 @@ func (q *Queries) ListSites(ctx context.Context) ([]Site, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeSiteByID = `-- name: RemoveSiteByID :one
+DELETE FROM sites WHERE id = $1 returning name
+`
+
+func (q *Queries) RemoveSiteByID(ctx context.Context, id int64) (string, error) {
+	row := q.db.QueryRow(ctx, removeSiteByID, id)
+	var name string
+	err := row.Scan(&name)
+	return name, err
 }

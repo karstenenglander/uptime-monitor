@@ -4,9 +4,12 @@ import (
 	"log"
 	"net/http"
 	"time"
+	repo "uptime-monitor/internal/adapters/postgresql/sqlc"
 	"uptime-monitor/internal/sites"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func (app *application) mount() http.Handler {
@@ -27,9 +30,13 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("All good."))
 	})
 
-	siteService := sites.NewService()
+	siteService := sites.NewService(repo.New(app.pool))
 	siteHandler := sites.NewHandler(siteService)
 	r.Get("/sites", siteHandler.ListSites)
+
+	r.Post("/sites/add", siteHandler.AddSite)
+
+	r.Post("/sites/remove", siteHandler.RemoveSite)
 
 	return r
 }
@@ -50,6 +57,7 @@ func (app *application) run(h http.Handler) error {
 
 type application struct {
 	config config
+	pool   *pgxpool.Pool
 }
 
 type config struct {

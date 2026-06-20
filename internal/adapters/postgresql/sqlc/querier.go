@@ -9,8 +9,10 @@ import (
 )
 
 type Querier interface {
-	FindSitesByID(ctx context.Context, id int64) (Site, error)
+	AddSite(ctx context.Context, arg AddSiteParams) (int64, error)
+	FindSiteByID(ctx context.Context, id int64) (Site, error)
 	ListSites(ctx context.Context) ([]Site, error)
+	RemoveSiteByID(ctx context.Context, id int64) (string, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -32,10 +32,6 @@ func main() {
 		},
 	}
 
-	api := application{
-		config: cfg,
-	}
-
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	slog.SetDefault(logger)
@@ -44,6 +40,11 @@ func main() {
 	if err != nil {
 		slog.Error("Database has failed to connect", "error:", err)
 		os.Exit(1)
+	}
+
+	api := application{
+		config: cfg,
+		pool: pool,
 	}
 
 	defer cleanup()
