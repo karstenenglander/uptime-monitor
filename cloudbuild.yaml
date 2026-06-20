@@ -36,13 +36,44 @@ steps:
         "cloud_build_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
       ]
 
-options:
-  logging: CLOUD_LOGGING_ONLY
+    # Goose Migrations
+  - id: install-proxy
+    name: gcr.io/cloud-builders/wget
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        wget -O /workspace/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/2.22.1
+        chmod +x /workspace/cloud-sql-proxy
+
+  - id: migrate
+    waitFor: ["install-proxy"]
+    name: golang:1.26
+    entrypoint: sh
+    env:
+      - "DATABASE_NAME=${_DATABASE_NAME}"
+      - "DATABASE_USER=${_DATABASE_USER}"
+      - "DATABASE_PORT=${_DATABASE_PORT}"
+      - "INSTANCE_CONNECTION_NAME=${_INSTANCE_CONNECTION_NAME}"
+    args:
+      - "-c"
+      - |
+        /workspace/cloud-sql-proxy ${_INSTANCE_CONNECTION_NAME} --port ${_DATABASE_PORT} & sleep 2;
+        # Cloud SQL Proxy is now up and running, add your own logic below to connect
+        go install github.com/pressly/goose/v3/cmd/goose@latest
+        ~/go/bin/goose -dir /workspace/internal/adapters/postgresql/migrations postgres "host=127.0.0.1 port=5432 user=${_DATABASE_USER} dbname=${_DATABASE_NAME} sslmode=disable" up
 
 substitutions:
+  _DATABASE_USER: uptime-monitor-runtime@englander-suite.iam
+  _DATABASE_NAME: uptime-database
+  _INSTANCE_CONNECTION_NAME: englander-suite:us-east4:uptime-database-instance
+  _DATABASE_PORT: "5432"
   _SERVICE: uptime-monitor-gcr
   _REGION: us-east4
   _REPO: docker-artifact-repository
+
+options:
+  logging: CLOUD_LOGGING_ONLY
 
 images:
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}"
