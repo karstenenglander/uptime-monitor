@@ -34,6 +34,18 @@ resource "google_project_iam_member" "runtime_cloudsql_instance_user" {
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
+resource "google_project_iam_member" "cloudbuild_cloudsql_client" {
+  project = "englander-suite"
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "cloudbuild_cloudsql_instance_user" {
+  project = "englander-suite"
+  role    = "roles/cloudsql.instanceUser"
+  member  = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
+}
+
 resource "google_artifact_registry_repository_iam_member" "member" {
   project    = google_artifact_registry_repository.docker-artifact-repository.project
   location   = google_artifact_registry_repository.docker-artifact-repository.location
