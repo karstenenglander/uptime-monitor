@@ -74,10 +74,6 @@ resource "google_cloud_run_service" "default" {
           value = "englander-suite:us-east4:uptime-database-instance"
         }
         env {
-          name  = "PORT"
-          value = ":8080"
-        }
-        env {
           name  = "DATABASE_SERVICE_ACCOUNT"
           value = "user=uptime-monitor-runtime@englander-suite.iam dbname=uptime-database sslmode=disable"
         }

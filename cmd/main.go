@@ -10,7 +10,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	port, portExists := os.LookupEnv("PORT")
+	portWithoutColin, portExists := os.LookupEnv("PORT")
+	port := ":" + portWithoutColin
 	if !portExists {
 		port = ":8080"
 	}
