@@ -64,7 +64,7 @@ steps:
         $(go env GOPATH)/bin/goose -dir /workspace/internal/adapters/postgresql/migrations postgres "host=127.0.0.1 port=5432 user=${_DATABASE_USER} dbname=${_DATABASE_NAME} sslmode=disable" up
 
 substitutions:
-  _DATABASE_USER: uptime-monitor-runtime@englander-suite.iam
+  _DATABASE_USER: 755712906263-compute@developer
   _DATABASE_NAME: uptime-database
   _INSTANCE_CONNECTION_NAME: englander-suite:us-east4:uptime-database-instance
   _DATABASE_PORT: "5432"

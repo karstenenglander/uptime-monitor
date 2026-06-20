@@ -166,6 +166,15 @@ resource "google_sql_user" "iam_service_account_user" {
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
 
+resource "google_sql_user" "cloudbuild_service_account_user" {
+  # Note: for Postgres only, GCP requires omitting the ".gserviceaccount.com" suffix
+  # from the service account email due to length limits on database usernames.
+
+  name     = trimsuffix("755712906263-compute@developer.gserviceaccount.com", ".gserviceaccount.com")
+  instance = google_sql_database_instance.instance.name
+  type     = "CLOUD_IAM_SERVICE_ACCOUNT"
+}
+
 resource "google_cloud_tasks_queue" "uptime_queue" {
   name     = "uptime-queue"
   location = "us-east4"
