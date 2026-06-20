@@ -43,7 +43,7 @@ steps:
     args:
       - -c
       - |
-        wget -O /workspace/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/2.22.1
+        wget -O /workspace/cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/2.22.1/cloud-sql-proxy.linux.amd64
         chmod +x /workspace/cloud-sql-proxy
 
   - id: migrate
