@@ -1,11 +1,48 @@
 steps:
-- name: 'hashicorp/terraform:latest'
-  args: ['init']
-- name: 'hashicorp/terraform:latest'
-  args: ['plan']
-- name: 'hashicorp/terraform:latest'
-  args: ['apply', '-auto-approve']
+  # Build the container image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
+        ".",
+      ]
+
+  # Push the container image to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
+      ]
+
+  # Terraform steps
+  - name: "hashicorp/terraform:latest"
+    args: ["init"]
+  - name: "hashicorp/terraform:latest"
+    args:
+      [
+        "plan",
+        "-var",
+        "cloud_build_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
+      ]
+  - name: "hashicorp/terraform:latest"
+    args:
+      [
+        "apply",
+        "-auto-approve",
+        "-var",
+        "cloud_build_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
+      ]
 
 options:
   logging: CLOUD_LOGGING_ONLY
 
+substitutions:
+  _SERVICE: uptime-monitor-gcr
+  _REGION: us-east4
+  _REPO: docker-artifact-repository
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}"

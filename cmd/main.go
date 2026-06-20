@@ -10,11 +10,24 @@ import (
 func main() {
 	ctx := context.Background()
 
+	port, portExists := os.LookupEnv("PORT")
+	if !portExists {
+		port = ":8080"
+	}
+	databaseServiceAccount, databaseServiceAccountExists := os.LookupEnv("DATABASE_SERVICE_ACCOUNT")
+	if !databaseServiceAccountExists {
+		databaseServiceAccount = ""
+	}
+	icnString, icnStringExists := os.LookupEnv("ICN_STRING")
+	if !icnStringExists {
+		icnString = ""
+	}
+
 	cfg := config{
-		addr: ":8080",
+		addr: port,
 		db: dbConfig{
-			dsn: os.Getenv("DATABASE_SERVICE_ACCOUNT"),
-			icn: os.Getenv("ICN_STRING"),
+			dsn: databaseServiceAccount,
+			icn: icnString,
 		},
 	}
 

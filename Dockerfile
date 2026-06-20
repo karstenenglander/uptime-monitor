@@ -17,7 +17,7 @@ COPY . .
 
 # Enable them if you need them
 # ENV CGO_ENABLED=0
-# ENV GOOS=linux
+ENV GOOS=linux
 
 RUN go build -ldflags="-w -s" -o main ./cmd
 

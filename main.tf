@@ -50,6 +50,11 @@ resource "google_artifact_registry_repository" "docker-artifact-repository" {
 
 }
 
+variable "cloud_build_image" {
+  type        = string
+  description = "Docker image passed from cloudbuild"
+}
+
 resource "google_cloud_run_service" "default" {
   name     = "uptime-monitor-gcr"
   location = "us-east4"
@@ -63,7 +68,7 @@ resource "google_cloud_run_service" "default" {
     spec {
       service_account_name = google_service_account.service_account.email
       containers {
-        image = "us-docker.pkg.dev/cloudrun/container/hello"
+        image = var.cloud_build_image
         env {
           name  = "ICN_STRING"
           value = "englander-suite:us-east4:uptime-database-instance"
@@ -75,6 +80,7 @@ resource "google_cloud_run_service" "default" {
       }
     }
   }
+
   traffic {
     percent         = 100
     latest_revision = true
