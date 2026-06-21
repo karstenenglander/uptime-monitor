@@ -22,12 +22,6 @@ resource "google_service_account" "service_account" {
   display_name = "Uptime Monitor Cloud Run Runtime"
 }
 
-resource "google_project_iam_member" "runtime_secret_accessor" {
-  project = "englander-suite"
-  role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
-}
-
 resource "google_project_iam_member" "runtime_cloudsql_client" {
   project = "englander-suite"
   role    = "roles/cloudsql.client"
