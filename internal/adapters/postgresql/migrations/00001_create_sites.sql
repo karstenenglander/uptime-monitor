@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS sites (
     name VARCHAR NOT NULL,
     url VARCHAR NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    polled_at TIMESTAMPZ
+    polled_at TIMESTAMPTZ
 );
 
 -- +goose Down
