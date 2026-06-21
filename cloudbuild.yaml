@@ -63,6 +63,8 @@ steps:
         /workspace/cloud-sql-proxy ${_INSTANCE_CONNECTION_NAME} --port ${_DATABASE_PORT} & until pg_isready -h 127.0.0.1 -p 5432; do sleep 1; done
         # Cloud SQL Proxy is now up and running, add your own logic below to connect
         go install github.com/pressly/goose/v3/cmd/goose@latest
+        export PGPASSWORD=$$POSTGRES_PASSWORD
+        psql -h 127.0.0.1 -p 5432 -U migration_iam_user -d ${_DATABASE_NAME} "GRANT ALL ON TABLE sites TO \"uptime-monitor-runtime@englander-suite.iam\";"
         $(go env GOPATH)/bin/goose -dir /workspace/internal/adapters/postgresql/migrations postgres "host=127.0.0.1 port=5432 user=migration_iam_user password=$$POSTGRES_PASSWORD dbname=${_DATABASE_NAME} sslmode=disable" up
 
 substitutions:
