@@ -22,6 +22,12 @@ resource "google_service_account" "service_account" {
   display_name = "Uptime Monitor Cloud Run Runtime"
 }
 
+resource "google_project_iam_member" "runtime_secret_accessor" {
+  project = "englander-suite"
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
+}
+
 resource "google_project_iam_member" "runtime_cloudsql_client" {
   project = "englander-suite"
   role    = "roles/cloudsql.client"
@@ -155,6 +161,18 @@ resource "google_sql_user" "iam_user" {
   name     = "karstenenglander@gmail.com"
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_USER"
+}
+
+resource "google_sql_user" "migration_iam_user" {
+  name     = "migration_iam_user"
+  instance = google_sql_database_instance.instance.name
+  type     = "BUILT_IN"
+  password = data.google_secret_manager_secret_version.postgres_password.secret_data
+}
+
+data "google_secret_manager_secret_version" "postgres_password" {
+  secret  = "POSTGRES_PASSWORD"
+  version = "latest"
 }
 
 resource "google_sql_user" "iam_service_account_user" {
