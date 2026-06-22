@@ -21,7 +21,10 @@ steps:
   - name: "bash"
     secretEnv:
       - TERRAFORM_TFVARS
-    script: printf '%s' "$$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
+    entrypoint: bash
+    args:
+      - -c
+      - echo "$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
 
   # Terraform steps
   - name: "hashicorp/terraform:latest"
