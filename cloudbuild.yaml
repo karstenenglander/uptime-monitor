@@ -25,6 +25,7 @@ steps:
     args:
       - -c
       - |
+        echo "$$TERRAFORM_BACKEND" > /workspace/backend.hcl
         echo "$$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
 
   # Terraform steps
@@ -94,6 +95,8 @@ availableSecrets:
       env: POSTGRES_PASSWORD
     - versionName: projects/${PROJECT_ID}/secrets/TERRAFORM_TFVARS/versions/latest
       env: TERRAFORM_TFVARS
+    - versionName: projects/${PROJECT_ID}/secrets/TERRAFORM_BACKEND/versions/latest
+      env: TERRAFORM_BACKEND
 
 images:
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}"
