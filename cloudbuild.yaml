@@ -21,7 +21,7 @@ steps:
   - name: "bash"
     secretEnv:
       - TERRAFORM_TFVARS
-    script: echo "$$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
+    script: printf '%s' "$$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
 
   # Terraform steps
   - name: "hashicorp/terraform:latest"
