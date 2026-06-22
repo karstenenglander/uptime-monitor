@@ -21,6 +21,7 @@ steps:
   - name: "bash"
     secretEnv:
       - TERRAFORM_TFVARS
+      - TERRAFORM_BACKEND
     entrypoint: bash
     args:
       - -c
