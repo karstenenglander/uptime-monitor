@@ -24,7 +24,7 @@ resource "google_service_account" "service_account" {
 
 resource "google_project_iam_member" "cloud_tasks_agent" {
   project = "englander-suite"
-  role    = "roles/cloudtasks.serviceAgent"
+  role    = "roles/cloudtasks.enqueuer"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 

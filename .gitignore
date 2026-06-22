@@ -4,6 +4,15 @@
 # macOS
 .DS_Store
 
+# Compiled binary
+main
+
+# Debug logs
+tf-debug.log
+
+
+
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
