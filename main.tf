@@ -25,6 +25,12 @@ resource "google_project_iam_member" "secret_accessor" {
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
+resource "google_project_iam_member" "project_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${var.cloudbuild_sa}"
+}
+
 resource "google_project_iam_member" "cloud_tasks_agent" {
   project = var.project_id
   role    = "roles/cloudtasks.enqueuer"
