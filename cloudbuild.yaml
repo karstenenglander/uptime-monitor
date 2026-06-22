@@ -24,7 +24,8 @@ steps:
     entrypoint: bash
     args:
       - -c
-      - echo "$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
+      - |
+        echo "$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
 
   # Terraform steps
   - name: "hashicorp/terraform:latest"
