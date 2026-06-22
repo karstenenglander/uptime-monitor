@@ -17,13 +17,20 @@ steps:
         "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
       ]
 
+  # Build secrets
+  - name: "bash"
+    secretEnv:
+      - TERRAFORM_TFVARS
+    script: echo "$$TERRAFORM_TFVARS" > /workspace/terraform.tfvars
+
   # Terraform steps
   - name: "hashicorp/terraform:latest"
-    args: ["init"]
+    args: ["init", "-backend-config=backend.hcl"]
   - name: "hashicorp/terraform:latest"
     args:
       [
         "plan",
+        "-var-file=terraform.tfvars",
         "-var",
         "cloud_build_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
       ]
@@ -32,6 +39,7 @@ steps:
       [
         "apply",
         "-auto-approve",
+        "-var-file=terraform.tfvars",
         "-var",
         "cloud_build_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}",
       ]
@@ -80,6 +88,8 @@ availableSecrets:
   secretManager:
     - versionName: projects/${PROJECT_ID}/secrets/POSTGRES_PASSWORD/versions/latest
       env: POSTGRES_PASSWORD
+    - versionName: projects/${PROJECT_ID}/secrets/TERRAFORM_TFVARS/versions/latest
+      env: TERRAFORM_TFVARS
 
 images:
   - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPO}/${_SERVICE}:${COMMIT_SHA}"

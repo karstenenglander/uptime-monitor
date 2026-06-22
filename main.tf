@@ -1,8 +1,5 @@
 terraform {
-  backend "gcs" {
-    bucket = "englander-suite-tfstate"
-    prefix = "uptime-monitor"
-  }
+  backend "gcs" {}
   required_providers {
     google = {
       source  = "hashicorp/google"
@@ -12,9 +9,9 @@ terraform {
 }
 
 provider "google" {
-  project = "englander-suite"
-  region  = "us-east4"
-  zone    = "us-east4-a"
+  project = var.project_id
+  region  = var.region
+  zone    = var.zone
 }
 
 resource "google_service_account" "service_account" {
@@ -22,20 +19,26 @@ resource "google_service_account" "service_account" {
   display_name = "Uptime Monitor Cloud Run Runtime"
 }
 
+resource "google_project_iam_member" "secret_accessor" {
+  project = var.project_id
+  role    = "roles/secretmanager.secretAccessor"
+  member  = "serviceAccount:${google_service_account.service_account.email}"
+}
+
 resource "google_project_iam_member" "cloud_tasks_agent" {
-  project = "englander-suite"
+  project = var.project_id
   role    = "roles/cloudtasks.enqueuer"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
 resource "google_project_iam_member" "runtime_cloudsql_client" {
-  project = "englander-suite"
+  project = var.project_id
   role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
 
 resource "google_project_iam_member" "runtime_cloudsql_instance_user" {
-  project = "englander-suite"
+  project = var.project_id
   role    = "roles/cloudsql.instanceUser"
   member  = "serviceAccount:${google_service_account.service_account.email}"
 }
@@ -45,11 +48,11 @@ resource "google_artifact_registry_repository_iam_member" "member" {
   location   = google_artifact_registry_repository.docker-artifact-repository.location
   repository = google_artifact_registry_repository.docker-artifact-repository.id
   role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:755712906263-compute@developer.gserviceaccount.com"
+  member     = "serviceAccount:${var.cloudbuild_sa}"
 }
 
 resource "google_artifact_registry_repository" "docker-artifact-repository" {
-  location      = "us-east4"
+  location      = var.region
   repository_id = "docker-artifact-repository"
   description   = "Docker Artifact Repository"
   format        = "DOCKER"
@@ -61,9 +64,44 @@ variable "cloud_build_image" {
   description = "Docker image passed from cloudbuild"
 }
 
+variable "project_id" {
+  type        = string
+  description = "The projectID"
+}
+
+variable "region" {
+  type        = string
+  description = "Project's region"
+}
+
+variable "zone" {
+  type        = string
+  description = "Project's zone"
+}
+
+variable "cloudbuild_sa" {
+  type        = string
+  description = "Project's Cloud Build SA"
+}
+
+variable "project_num" {
+  type        = string
+  description = "Project's number"
+}
+
+variable "personal_email" {
+  type        = string
+  description = "Admin's personal email"
+}
+
+variable "github_owner" {
+  type        = string
+  description = "Project's GitHub Owner Name"
+}
+
 resource "google_cloud_run_service" "default" {
   name     = "uptime-monitor-gcr"
-  location = "us-east4"
+  location = var.region
 
   template {
     metadata {
@@ -77,11 +115,11 @@ resource "google_cloud_run_service" "default" {
         image = var.cloud_build_image
         env {
           name  = "ICN_STRING"
-          value = "englander-suite:us-east4:uptime-database-instance"
+          value = "${var.project_id}:${var.region}:uptime-database-instance"
         }
         env {
           name  = "DATABASE_SERVICE_ACCOUNT"
-          value = "user=uptime-monitor-runtime@englander-suite.iam dbname=uptime-database sslmode=disable"
+          value = "user=uptime-monitor-runtime@${var.project_id}.iam dbname=uptime-database sslmode=disable"
         }
         env {
           name  = "QUEUE_ID"
@@ -89,11 +127,11 @@ resource "google_cloud_run_service" "default" {
         }
         env {
           name  = "PROJECT_ID"
-          value = "englander-suite"
+          value = var.project_id
         }
         env {
           name  = "LOCATION_ID"
-          value = "us-east4"
+          value = var.region
         }
       }
     }
@@ -108,9 +146,9 @@ resource "google_cloud_run_service" "default" {
 resource "google_cloudbuild_trigger" "tf-trigger" {
   name            = "uptime-monitor-main"
   location        = "global"
-  service_account = "projects/englander-suite/serviceAccounts/755712906263-compute@developer.gserviceaccount.com"
+  service_account = "projects/${var.project_id}/serviceAccounts/${var.cloudbuild_sa}"
   github {
-    owner = "karstenenglander"
+    owner = var.github_owner
     name  = "uptime-monitor"
     push {
       branch = "^main$"
@@ -133,7 +171,7 @@ resource "google_cloud_scheduler_job" "job" {
 
   http_target {
     http_method = "POST"
-    uri         = "https://uptime-monitor-gcr-755712906263.us-east4.run.app"
+    uri         = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app"
     body        = base64encode("{\"foo\":\"bar\"}")
     headers = {
       "Content-Type" = "application/json"
@@ -150,7 +188,7 @@ resource "google_sql_database" "database" {
 
 resource "google_sql_database_instance" "instance" {
   name             = "uptime-database-instance"
-  region           = "us-east4"
+  region           = var.region
   database_version = "POSTGRES_18"
   settings {
     tier = "db-f1-micro"
@@ -170,7 +208,7 @@ resource "google_sql_database_instance" "instance" {
 }
 
 resource "google_sql_user" "iam_user" {
-  name     = "karstenenglander@gmail.com"
+  name     = var.personal_email
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_USER"
 }
@@ -200,14 +238,14 @@ resource "google_sql_user" "cloudbuild_service_account_user" {
   # Note: for Postgres only, GCP requires omitting the ".gserviceaccount.com" suffix
   # from the service account email due to length limits on database usernames.
 
-  name     = trimsuffix("755712906263-compute@developer.gserviceaccount.com", ".gserviceaccount.com")
+  name     = trimsuffix("${var.cloudbuild_sa}", ".gserviceaccount.com")
   instance = google_sql_database_instance.instance.name
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
 
 resource "google_cloud_tasks_queue" "uptime_queue" {
   name     = "uptime-queue"
-  location = "us-east4"
+  location = var.region
 
   rate_limits {
     max_concurrent_dispatches = 3
