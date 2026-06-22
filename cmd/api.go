@@ -40,6 +40,8 @@ func (app *application) mount() http.Handler {
 
 	r.Post("/sites/poll/enqueue", siteHandler.EnqueuePollSites)
 
+	//r.Post("/sites/poll/worker", siteHandler.PollSite)
+
 	return r
 }
 

@@ -51,11 +51,16 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 		queueID = ""
 	}
 
+	endpointURL, endpointURLExists := os.LookupEnv("ENDPOINT_URL")
+	if !endpointURLExists {
+		endpointURL = ""
+	}
+
 	var enqueued []*cloudtaskspb.Task
 	for _, v := range sites {
-		var url = v.Url
-		var message = v.Name
-		task, err := tasks.CreateHTTPTask(projectID, locationID, queueID, url, message)
+		// The message is the URL of the site to be polled
+		var message = v.Url
+		task, err := tasks.CreateHTTPTask(projectID, locationID, queueID, endpointURL, message)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -67,7 +72,7 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 }
 
 // func (s *svc) pollSite(ctx context.Context) (string, error) {
-
+	
 // 	return
 // }
 

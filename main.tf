@@ -139,6 +139,10 @@ resource "google_cloud_run_service" "default" {
           name  = "LOCATION_ID"
           value = var.region
         }
+        env {
+          name  = "ENDPOINT_URL"
+          value = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/sites/poll/worker"
+        }
       }
     }
   }
