@@ -27,6 +27,17 @@ func (h *handler) ListSites(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, sites)
 }
 
+func (h *handler) EnqueuePollSites(w http.ResponseWriter, r *http.Request) {
+	sites, err := h.service.EnqueuePollSites(r.Context())
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// 2. Return JSON in an HTTP response
+	json.Write(w, http.StatusOK, sites)
+}
+
 func (h *handler) AddSite(w http.ResponseWriter, r *http.Request) {
 	var tempParams createAddParams
 	if err := json.Read(r, &tempParams); err != nil {

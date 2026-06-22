@@ -22,6 +22,12 @@ resource "google_service_account" "service_account" {
   display_name = "Uptime Monitor Cloud Run Runtime"
 }
 
+resource "google_project_iam_member" "cloud_tasks_agent" {
+  project = "englander-suite"
+  role    = "roles/cloudtasks.serviceAgent"
+  member  = "serviceAccount:${google_service_account.service_account.email}"
+}
+
 resource "google_project_iam_member" "runtime_cloudsql_client" {
   project = "englander-suite"
   role    = "roles/cloudsql.client"
@@ -76,6 +82,18 @@ resource "google_cloud_run_service" "default" {
         env {
           name  = "DATABASE_SERVICE_ACCOUNT"
           value = "user=uptime-monitor-runtime@englander-suite.iam dbname=uptime-database sslmode=disable"
+        }
+        env {
+          name  = "QUEUE_ID"
+          value = "uptime-queue"
+        }
+        env {
+          name  = "PROJECT_ID"
+          value = "englander-suite"
+        }
+        env {
+          name  = "LOCATION_ID"
+          value = "us-east4"
         }
       }
     }

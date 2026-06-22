@@ -38,6 +38,8 @@ func (app *application) mount() http.Handler {
 
 	r.Post("/sites/remove", siteHandler.RemoveSite)
 
+	r.Post("/sites/poll/enqueue", siteHandler.EnqueuePollSites)
+
 	return r
 }
 
