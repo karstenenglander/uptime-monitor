@@ -7,6 +7,8 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addSite = `-- name: AddSite :one
@@ -25,12 +27,12 @@ func (q *Queries) AddSite(ctx context.Context, arg AddSiteParams) (int64, error)
 	return id, err
 }
 
-const findSiteByID = `-- name: FindSiteByID :one
+const findSitesByID = `-- name: FindSitesByID :one
 SELECT id, name, url, created_at, polled_at FROM sites WHERE id = $1
 `
 
-func (q *Queries) FindSiteByID(ctx context.Context, id int64) (Site, error) {
-	row := q.db.QueryRow(ctx, findSiteByID, id)
+func (q *Queries) FindSitesByID(ctx context.Context, id int64) (Site, error) {
+	row := q.db.QueryRow(ctx, findSitesByID, id)
 	var i Site
 	err := row.Scan(
 		&i.ID,
@@ -84,4 +86,20 @@ func (q *Queries) RemoveSiteByID(ctx context.Context, id int64) (string, error) 
 	var name string
 	err := row.Scan(&name)
 	return name, err
+}
+
+const updateSitePolled = `-- name: UpdateSitePolled :one
+UPDATE sites SET polled_at = $1 WHERE id = $2 returning id
+`
+
+type UpdateSitePolledParams struct {
+	PolledAt pgtype.Timestamptz `json:"polled_at"`
+	ID       int64              `json:"id"`
+}
+
+func (q *Queries) UpdateSitePolled(ctx context.Context, arg UpdateSitePolledParams) (int64, error) {
+	row := q.db.QueryRow(ctx, updateSitePolled, arg.PolledAt, arg.ID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

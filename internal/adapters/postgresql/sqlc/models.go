@@ -13,5 +13,5 @@ type Site struct {
 	Name      string             `json:"name"`
 	Url       string             `json:"url"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	PolledAt  interface{}        `json:"polled_at"`
+	PolledAt  pgtype.Timestamptz `json:"polled_at"`
 }

@@ -10,9 +10,10 @@ import (
 
 type Querier interface {
 	AddSite(ctx context.Context, arg AddSiteParams) (int64, error)
-	FindSiteByID(ctx context.Context, id int64) (Site, error)
+	FindSitesByID(ctx context.Context, id int64) (Site, error)
 	ListSites(ctx context.Context) ([]Site, error)
 	RemoveSiteByID(ctx context.Context, id int64) (string, error)
+	UpdateSitePolled(ctx context.Context, arg UpdateSitePolledParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

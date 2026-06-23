@@ -38,16 +38,25 @@ func (h *handler) EnqueuePollSites(w http.ResponseWriter, r *http.Request) {
 	json.Write(w, http.StatusOK, sites)
 }
 
-// func (h *handler) PollSite(w http.ResponseWriter, r *http.Request) {
-// 	sites, err := h.service.PollSite(r.Context())
-// 	if err != nil {
-// 		log.Println(err)
-// 		http.Error(w, err.Error(), http.StatusInternalServerError)
-// 		return
-// 	}
-// 	// 2. Return JSON in an HTTP response
-// 	json.Write(w, http.StatusOK, sites)
-// }
+func (h *handler) PollSite(w http.ResponseWriter, r *http.Request) {
+
+	var tempParams pollParams
+	if err := json.Read(r, &tempParams); err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.service.PollSite(r.Context(), tempParams)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// 2. Return JSON in an HTTP response
+	json.Write(w, http.StatusOK, resp)
+}
 
 func (h *handler) AddSite(w http.ResponseWriter, r *http.Request) {
 	var tempParams createAddParams
@@ -90,7 +99,7 @@ func (h *handler) FindSiteByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	site, err := h.service.FindSiteByID(r.Context(), tempParams)
+	site, err := h.service.FindSitesByID(r.Context(), tempParams)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
