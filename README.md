@@ -1,88 +1,76 @@
-# URL Uptime Monitor
+# Uptime Monitor
 
-A Go backend service that pings registered URLs on a schedule and notifies users via HMAC-signed webhooks when a URL transitions between up and down.
+A cloud-native uptime monitoring service built on GCP as a learning project — the domain is intentionally simple so the focus stays on infrastructure, deployment, and architecture.
 
-## Concept
+## What It Does
 
-One sentence: **It pings URLs you register and alerts you via webhook when they go up or down.**
+Registers URLs, schedules periodic health checks via Cloud Scheduler and Cloud Tasks, and records results. Each registered site gets a Cloud Task enqueued per polling cycle; the worker hits the URL and records status and latency.
 
-Think Pingdom / UptimeRobot, stripped down. The domain is intentionally boring — the code and architecture are the point, not the problem.
+## API
 
-## Technologies
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/sites` | List registered sites |
+| `POST` | `/sites/add` | Register a site |
+| `POST` | `/sites/remove` | Remove a site |
+| `POST` | `/sites/poll/enqueue` | Enqueue a poll task per site (called by Cloud Scheduler) |
+| `POST` | `/sites/poll/worker` | Worker endpoint called by Cloud Tasks per site |
 
-| Tech | Role |
-|------|------|
-| **Go** | Language |
-| **PostgreSQL** | Monitor records + check history |
-| **Cloud Run** | Hosts the HTTP API and worker endpoints |
-| **Cloud Build** | CI/CD — GitHub push triggers container build + deploy |
-| **Cloud Scheduler** | Fires every 1 minute → hits the dispatch endpoint |
-| **Cloud Tasks** | Dispatcher enqueues one check task per monitor; workers run in parallel |
-| **Webhooks + HMAC** | On status transition, POST to the user's webhook with HMAC signature |
-| **Bearer API keys** (SHA-256 hashed) | Auth for the management API |
-| **Structured logging** (`slog`) | Every check emits a log line Cloud Run indexes |
+## Stack
 
-## Build in 3 Layers
+| Layer | Technology |
+|-------|-----------|
+| Language | Go |
+| Router | chi |
+| Database | PostgreSQL (Cloud SQL) |
+| DB Access | pgx + sqlc (type-safe generated queries) |
+| Migrations | goose |
+| Container | Docker (multi-stage, hardened, non-root) |
+| Hosting | Cloud Run |
+| Queue | Cloud Tasks |
+| Scheduler | Cloud Scheduler |
+| IaC | Terraform |
+| CI/CD | Cloud Build (GitOps — push to main triggers build + deploy + migrate) |
+| Secrets | Secret Manager |
 
-Each layer is independently shippable. Finish and commit each before moving on — avoid the "half-finished monorepo" trap.
-
-### Layer 1 — Base CRUD service
-
-- `POST /monitors` — register a URL
-- `GET /monitors` — list registered monitors
-- `GET /monitors/:id` — detail view
-- Bearer API-key auth (SHA-256 hashed keys in DB, middleware)
-- PostgreSQL with migrations (goose or golang-migrate)
-- Dockerfile
-- Cloud Run deploy
-- Cloud Build trigger on push to main
-
-**Outcome:** a working (but dumb) CRUD service deployed on Cloud Run. Stop and commit.
-
-### Layer 2 — Scheduling core
-
-- `POST /dispatch` — internal endpoint; scans monitors due for a check, enqueues one Cloud Task per monitor
-- `POST /check` — Cloud Tasks worker endpoint, OIDC-authed; performs the HTTP check, writes result row, updates current status
-- Cloud Scheduler triggers `/dispatch` every 1 minute
-
-**Outcome:** the service actually does its job. Stop and commit.
-
-### Layer 3 — Notifications
-
-- `PATCH /monitors/:id/webhook` — register a callback URL + shared secret
-- On status transition (up → down or down → up), enqueue a Cloud Task to `/notify`
-- `/notify` POSTs to the user's webhook with an `X-Signature: sha256=...` header
-- Cloud Tasks handles retry semantics automatically on 5xx responses
-
-### Optional Layer 4 — Polish
-
-- **GCS**: store response body snapshots for failed checks; return signed URLs for inspection
-- Minimal HTML `GET /monitors/:id` page showing the last 24h of check history
-
-## What This Project Is Not
-
-- Not a task/todo API (redundant with iRolls work)
-- Not a URL shortener or pastebin (too generic, no async/scheduled work to showcase)
-- Not a chat/forum (scope trap)
-
-## Resume Bullet (Goal State)
-
-Once Layer 3 ships, the resume entry should read:
+## Architecture
 
 ```
-URL Uptime Monitor | Source Code        Go | PostgreSQL | Cloud Run | Cloud Tasks | Cloud Scheduler
-• Built a distributed health-check service in Go on Cloud Run, scheduling
-  per-URL checks via Cloud Scheduler + Cloud Tasks to isolate work units
-  and enable parallel retries.
-• Implemented HMAC-signed webhook notifications on status transitions,
-  delivered asynchronously through Cloud Tasks with automatic retry on failure.
+Cloud Scheduler (1 min)
+        │
+        ▼
+POST /sites/poll/enqueue
+        │  (one task per registered site)
+        ▼
+Cloud Tasks Queue
+        │
+        ▼
+POST /sites/poll/worker
+        │
+        ▼
+HTTP GET → target URL → record result
 ```
 
-## Alternatives (Same Architecture, Different Domain)
+## Infrastructure
 
-The architecture transfers if the domain stops being motivating:
+All GCP resources are managed by Terraform:
 
-- **RSS feed aggregator** — Scheduler fetches feeds on interval instead of pinging URLs; everything else identical.
-- **Webhook relay** — Drop Cloud Scheduler entirely; service receives webhooks, verifies HMAC, forwards to registered destinations with retry via Cloud Tasks.
+- **Cloud Run** — hosts the Go service
+- **Cloud SQL (Postgres 18)** — stores sites and check results; uses IAM database authentication (no passwords for the app)
+- **Cloud Tasks** — queue with rate limits, exponential backoff, and automatic retries
+- **Cloud Scheduler** — triggers the enqueue endpoint on a 1-minute cron
+- **Secret Manager** — holds migration credentials and Terraform state config
+- **Artifact Registry** — stores Docker images
+- **IAM** — least-privilege service accounts for runtime and CI/CD
 
-Pick whichever domain keeps momentum.
+## CI/CD Pipeline
+
+Every push to `main` runs:
+
+1. Build Docker image
+2. Push to Artifact Registry
+3. `terraform apply` — provisions or updates all infrastructure
+4. Run `goose up` migrations via Cloud SQL Proxy
+
+Terraform state is stored remotely in GCS.

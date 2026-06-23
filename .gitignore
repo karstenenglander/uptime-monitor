@@ -11,8 +11,6 @@ main
 tf-debug.log
 
 
-
-
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -88,3 +86,5 @@ terraform.rc
 # Optional: ignore plan files saved before destroying Terraform configuration
 # Uncomment the line below if you want to ignore planout files.
 # planout
+# Local development notes
+NOTES.md
