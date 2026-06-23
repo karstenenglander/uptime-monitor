@@ -2,6 +2,7 @@ package sites
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -70,7 +71,6 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 	if !queueIDExists {
 		queueID = ""
 	}
-
 	endpointURL, endpointURLExists := os.LookupEnv("ENDPOINT_URL")
 	if !endpointURLExists {
 		endpointURL = ""
@@ -78,8 +78,13 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 
 	var enqueued []*cloudtaskspb.Task
 	for _, v := range sites {
-		// The message is the URL of the site to be polled
-		var message = v.Url
+		// The message is the body of the task
+		params := pollParams{Id: v.ID, Url: v.Url}
+		message, err := json.Marshal(params)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
 		task, err := tasks.CreateHTTPTask(projectID, locationID, queueID, endpointURL, message)
 		if err != nil {
 			log.Println(err)

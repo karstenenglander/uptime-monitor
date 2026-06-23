@@ -13,7 +13,7 @@ type TaskCreator interface {
 }
 
 // createHTTPTask creates a new task with a HTTP target then adds it to a Queue.
-func CreateHTTPTask(projectID, locationID, queueID, url, message string) (*taskspb.Task, error) {
+func CreateHTTPTask(projectID, locationID, queueID, url string, message []byte) (*taskspb.Task, error) {
 
 	// Create a new Cloud Tasks client instance.
 	// See https://godoc.org/cloud.google.com/go/cloudtasks/apiv2
@@ -43,7 +43,7 @@ func CreateHTTPTask(projectID, locationID, queueID, url, message string) (*tasks
 	}
 
 	// Add a payload message if one is present.
-	req.Task.GetHttpRequest().Body = []byte(message)
+	req.Task.GetHttpRequest().Body = message
 
 	createdTask, err := client.CreateTask(ctx, req)
 	if err != nil {
