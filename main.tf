@@ -31,6 +31,12 @@ resource "google_project_iam_member" "project_iam_admin" {
   member  = "serviceAccount:${var.cloudbuild_sa}"
 }
 
+resource "google_project_iam_member" "run_invoker" {
+  project = var.project_id
+  role    = "roles/run.invoker"
+  member  = "serviceAccount:${google_service_account.service_account.email}"
+}
+
 resource "google_project_iam_member" "cloud_tasks_agent" {
   project = var.project_id
   role    = "roles/cloudtasks.enqueuer"
@@ -124,7 +130,7 @@ resource "google_cloud_run_service" "default" {
           value = "${var.project_id}:${var.region}:uptime-database-instance"
         }
         env {
-          name  = "DATABASE_SERVICE_ACCOUNT"
+          name  = "RUNTIME_SERVICE_ACCOUNT"
           value = "user=uptime-monitor-runtime@${var.project_id}.iam dbname=uptime-database sslmode=disable"
         }
         env {
@@ -143,6 +149,7 @@ resource "google_cloud_run_service" "default" {
           name  = "ENDPOINT_URL"
           value = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/sites/poll/worker"
         }
+        env {}
       }
     }
   }
@@ -173,7 +180,7 @@ resource "google_cloud_scheduler_job" "job" {
   description      = "Runs uptime-monitor once every 1 minute"
   schedule         = "* * * * *"
   time_zone        = "America/New_York"
-  attempt_deadline = "320s"
+  attempt_deadline = "59s"
 
   retry_config {
     retry_count = 1
@@ -181,10 +188,9 @@ resource "google_cloud_scheduler_job" "job" {
 
   http_target {
     http_method = "POST"
-    uri         = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/"
-    body        = base64encode("{}")
-    headers = {
-      "Content-Type" = "application/json"
+    uri         = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/sites/poll/enqueue"
+    oidc_token {
+      service_account_email = google_service_account.service_account.email
     }
   }
 }
