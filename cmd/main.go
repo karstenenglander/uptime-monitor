@@ -15,7 +15,7 @@ func main() {
 	if !portExists {
 		port = ":8080"
 	}
-	databaseServiceAccount, databaseServiceAccountExists := os.LookupEnv("RUNTIME_SERVICE_ACCOUN")
+	databaseServiceAccount, databaseServiceAccountExists := os.LookupEnv("RUNTIME_SERVICE_ACCOUNT")
 	if !databaseServiceAccountExists {
 		databaseServiceAccount = ""
 	}
