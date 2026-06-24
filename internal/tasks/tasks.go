@@ -50,7 +50,7 @@ func CreateHTTPTaskWithToken(projectID, locationID, queueID, url string, message
 	taskName := strconv.FormatUint(taskNameHash, 10)
 	fullTaskName := queuePath + "/tasks/" + taskName
 
-	serviceAccountEmail, serviceAccountEmailExists := os.LookupEnv("RUNTIME_SERVICE_ACCOUNT")
+	serviceAccountEmail, serviceAccountEmailExists := os.LookupEnv("RUNTIME_SA")
 	if !serviceAccountEmailExists {
 		serviceAccountEmail = ""
 	}
