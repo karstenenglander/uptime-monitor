@@ -130,7 +130,7 @@ resource "google_cloud_run_service" "default" {
           value = "${var.project_id}:${var.region}:uptime-database-instance"
         }
         env {
-          name  = "RUNTIME_SERVICE_ACCOUNT"
+          name  = "DATABASE_SERVICE_ACCOUNT"
           value = "user=uptime-monitor-runtime@${var.project_id}.iam dbname=uptime-database sslmode=disable"
         }
         env {
@@ -148,6 +148,10 @@ resource "google_cloud_run_service" "default" {
         env {
           name  = "ENDPOINT_URL"
           value = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/sites/poll/worker"
+        }
+        env {
+          name  = "RUNTIME_SA"
+          value = "uptime-monitor-runtime@englander-suite.iam.gserviceaccount.com"
         }
       }
     }
