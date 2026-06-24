@@ -181,8 +181,8 @@ resource "google_cloud_scheduler_job" "job" {
 
   http_target {
     http_method = "POST"
-    uri         = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app"
-    body        = base64encode("{\"foo\":\"bar\"}")
+    uri         = "https://uptime-monitor-gcr-${var.project_num}.${var.region}.run.app/"
+    body        = base64encode("{}")
     headers = {
       "Content-Type" = "application/json"
     }

@@ -15,7 +15,7 @@ func main() {
 	if !portExists {
 		port = ":8080"
 	}
-	databaseServiceAccount, databaseServiceAccountExists := os.LookupEnv("DATABASE_SERVICE_ACCOUNT")
+	databaseServiceAccount, databaseServiceAccountExists := os.LookupEnv("RUNTIME_SERVICE_ACCOUN")
 	if !databaseServiceAccountExists {
 		databaseServiceAccount = ""
 	}
@@ -44,7 +44,7 @@ func main() {
 
 	api := application{
 		config: cfg,
-		pool: pool,
+		pool:   pool,
 	}
 
 	defer cleanup()

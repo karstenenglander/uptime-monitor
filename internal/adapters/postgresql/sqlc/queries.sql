@@ -14,4 +14,4 @@ DELETE FROM sites WHERE id = $1 returning name;
 INSERT INTO sites (name, url) VALUES ($1, $2) returning id;
 
 -- name: UpdateSitePolled :one
-UPDATE sites SET polled_at = $1 WHERE id = $2 returning id;
+UPDATE sites SET polled_at = $1, latency = $2, last_status_code = $3 WHERE id = $4 returning id;

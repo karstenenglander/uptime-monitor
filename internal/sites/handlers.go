@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"uptime-monitor/internal/json"
+	types "uptime-monitor/internal/types"
 )
 
 type handler struct {
@@ -40,7 +41,7 @@ func (h *handler) EnqueuePollSites(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) PollSite(w http.ResponseWriter, r *http.Request) {
 
-	var tempParams pollParams
+	var tempParams types.PollParams
 	if err := json.Read(r, &tempParams); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -59,7 +60,7 @@ func (h *handler) PollSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) AddSite(w http.ResponseWriter, r *http.Request) {
-	var tempParams createAddParams
+	var tempParams types.CreateAddParams
 	if err := json.Read(r, &tempParams); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -76,7 +77,7 @@ func (h *handler) AddSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) RemoveSite(w http.ResponseWriter, r *http.Request) {
-	var tempParams createIdParams
+	var tempParams types.CreateIdParams
 	if err := json.Read(r, &tempParams); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -93,7 +94,7 @@ func (h *handler) RemoveSite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) FindSiteByID(w http.ResponseWriter, r *http.Request) {
-	var tempParams createIdParams
+	var tempParams types.CreateIdParams
 	if err := json.Read(r, &tempParams); err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)

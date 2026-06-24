@@ -28,7 +28,7 @@ func (q *Queries) AddSite(ctx context.Context, arg AddSiteParams) (int64, error)
 }
 
 const findSitesByID = `-- name: FindSitesByID :one
-SELECT id, name, url, created_at, polled_at FROM sites WHERE id = $1
+SELECT id, name, url, created_at, polled_at, last_status_code, latency FROM sites WHERE id = $1
 `
 
 func (q *Queries) FindSitesByID(ctx context.Context, id int64) (Site, error) {
@@ -40,13 +40,15 @@ func (q *Queries) FindSitesByID(ctx context.Context, id int64) (Site, error) {
 		&i.Url,
 		&i.CreatedAt,
 		&i.PolledAt,
+		&i.LastStatusCode,
+		&i.Latency,
 	)
 	return i, err
 }
 
 const listSites = `-- name: ListSites :many
 SELECT
-  id, name, url, created_at, polled_at
+  id, name, url, created_at, polled_at, last_status_code, latency
 FROM
   sites
 `
@@ -66,6 +68,8 @@ func (q *Queries) ListSites(ctx context.Context) ([]Site, error) {
 			&i.Url,
 			&i.CreatedAt,
 			&i.PolledAt,
+			&i.LastStatusCode,
+			&i.Latency,
 		); err != nil {
 			return nil, err
 		}
@@ -89,16 +93,23 @@ func (q *Queries) RemoveSiteByID(ctx context.Context, id int64) (string, error) 
 }
 
 const updateSitePolled = `-- name: UpdateSitePolled :one
-UPDATE sites SET polled_at = $1 WHERE id = $2 returning id
+UPDATE sites SET polled_at = $1, latency = $2, last_status_code = $3 WHERE id = $4 returning id
 `
 
 type UpdateSitePolledParams struct {
-	PolledAt pgtype.Timestamptz `json:"polled_at"`
-	ID       int64              `json:"id"`
+	PolledAt       pgtype.Timestamptz `json:"polled_at"`
+	Latency        pgtype.Int8        `json:"latency"`
+	LastStatusCode pgtype.Int4        `json:"last_status_code"`
+	ID             int64              `json:"id"`
 }
 
 func (q *Queries) UpdateSitePolled(ctx context.Context, arg UpdateSitePolledParams) (int64, error) {
-	row := q.db.QueryRow(ctx, updateSitePolled, arg.PolledAt, arg.ID)
+	row := q.db.QueryRow(ctx, updateSitePolled,
+		arg.PolledAt,
+		arg.Latency,
+		arg.LastStatusCode,
+		arg.ID,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

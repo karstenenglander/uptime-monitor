@@ -9,9 +9,11 @@ import (
 )
 
 type Site struct {
-	ID        int64              `json:"id"`
-	Name      string             `json:"name"`
-	Url       string             `json:"url"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	PolledAt  pgtype.Timestamptz `json:"polled_at"`
+	ID             int64              `json:"id"`
+	Name           string             `json:"name"`
+	Url            string             `json:"url"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	PolledAt       pgtype.Timestamptz `json:"polled_at"`
+	LastStatusCode pgtype.Int4        `json:"last_status_code"`
+	Latency        pgtype.Int8        `json:"latency"`
 }

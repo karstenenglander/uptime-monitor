@@ -2,18 +2,26 @@ package tasks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+	"strconv"
+	"time"
+	"uptime-monitor/internal/hash"
+
+	types "uptime-monitor/internal/types"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 )
 
 type TaskCreator interface {
-	CreateHTTPTask(projectID, locationID, queueID, url, message string) (*taskspb.Task, error)
+	CreateHTTPTaskWithToken(projectID, locationID, queueID, url string, message *types.PollParams) (*taskspb.Task, error)
 }
 
 // createHTTPTask creates a new task with a HTTP target then adds it to a Queue.
-func CreateHTTPTask(projectID, locationID, queueID, url string, message []byte) (*taskspb.Task, error) {
+func CreateHTTPTaskWithToken(projectID, locationID, queueID, url string, message *types.PollParams) (*taskspb.Task, error) {
 
 	// Create a new Cloud Tasks client instance.
 	// See https://godoc.org/cloud.google.com/go/cloudtasks/apiv2
@@ -27,23 +35,47 @@ func CreateHTTPTask(projectID, locationID, queueID, url string, message []byte) 
 	// Build the Task queue path.
 	queuePath := fmt.Sprintf("projects/%s/locations/%s/queues/%s", projectID, locationID, queueID)
 
+	// Build Task name
+	messageJson, err := json.Marshal(message)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	taskId := message.Id
+	currentTime := time.Now()
+	hour := currentTime.Hour()
+	minute := currentTime.Minute()
+	taskWithTime := strconv.FormatInt(taskId, 10) + "_" + strconv.Itoa(hour) + "_" + strconv.Itoa(minute)
+	taskNameHash := hash.GetFNVHash(taskWithTime)
+	taskName := strconv.FormatUint(taskNameHash, 10)
+	fullTaskName := "projects/" + projectID + "/locations/" + locationID + "/queues/" + queueID + "/tasks/" + taskName
+
+	serviceAccountEmail, serviceAccountEmailExists := os.LookupEnv("RUNTIME_SERVICE_ACCOUNT")
+	if !serviceAccountEmailExists {
+		serviceAccountEmail = ""
+	}
+
 	// Build the Task payload.
 	// https://godoc.org/google.golang.org/genproto/googleapis/cloud/tasks/v2#CreateTaskRequest
 	req := &taskspb.CreateTaskRequest{
 		Parent: queuePath,
 		Task: &taskspb.Task{
+			Name: fullTaskName,
 			// https://godoc.org/google.golang.org/genproto/googleapis/cloud/tasks/v2#HttpRequest
 			MessageType: &taskspb.Task_HttpRequest{
 				HttpRequest: &taskspb.HttpRequest{
+					AuthorizationHeader: &taskspb.HttpRequest_OidcToken{
+						OidcToken: &taskspb.OidcToken{
+							ServiceAccountEmail: serviceAccountEmail,
+						},
+					},
+					Body:       messageJson,
 					HttpMethod: taskspb.HttpMethod_POST,
 					Url:        url,
 				},
 			},
 		},
 	}
-
-	// Add a payload message if one is present.
-	req.Task.GetHttpRequest().Body = message
 
 	createdTask, err := client.CreateTask(ctx, req)
 	if err != nil {

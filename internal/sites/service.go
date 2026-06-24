@@ -2,13 +2,13 @@ package sites
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"time"
 	repo "uptime-monitor/internal/adapters/postgresql/sqlc"
 	tasks "uptime-monitor/internal/tasks"
+	types "uptime-monitor/internal/types"
 
 	"cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -17,11 +17,10 @@ import (
 type Service interface {
 	ListSites(ctx context.Context) ([]repo.Site, error)
 	EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error)
-	PollSite(ctx context.Context, params pollParams) (*http.Response, error)
-	AddSite(ctx context.Context, params createAddParams) (int64, error)
-	RemoveSite(ctx context.Context, params createIdParams) (string, error)
-	FindSitesByID(ctx context.Context, params createIdParams) (repo.Site, error)
-	updateSitePolled(ctx context.Context, id int64) (int64, error)
+	PollSite(ctx context.Context, params types.PollParams) (*http.Response, error)
+	AddSite(ctx context.Context, params types.CreateAddParams) (int64, error)
+	RemoveSite(ctx context.Context, params types.CreateIdParams) (string, error)
+	FindSitesByID(ctx context.Context, params types.CreateIdParams) (repo.Site, error)
 }
 
 type svc struct {
@@ -41,15 +40,17 @@ func (s *svc) ListSites(ctx context.Context) ([]repo.Site, error) {
 	return sites, nil
 }
 
-func (s *svc) updateSitePolled(ctx context.Context, id int64) (int64, error) {
+func (s *svc) updateSitePolled(ctx context.Context, id int64, latency int64, lastStatusCode int) (int64, error) {
 	currentTime := pgtype.Timestamptz{Time: time.Now(), InfinityModifier: 0, Valid: true}
-	params := repo.UpdateSitePolledParams{ID: id, PolledAt: currentTime}
-	id, err := s.repo.UpdateSitePolled(ctx, params)
+	pgLatency := pgtype.Int8{Int64: latency, Valid: true}
+	pgLastStatusCode := pgtype.Int4{Int32: int32(lastStatusCode), Valid: true}
+	params := repo.UpdateSitePolledParams{ID: id, PolledAt: currentTime, Latency: pgLatency, LastStatusCode: pgLastStatusCode}
+	returnId, err := s.repo.UpdateSitePolled(ctx, params)
 	if err != nil {
 		log.Println(err)
-		return id, err
+		return returnId, err
 	}
-	return id, nil
+	return returnId, nil
 }
 
 func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error) {
@@ -79,13 +80,8 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 	var enqueued []*cloudtaskspb.Task
 	for _, v := range sites {
 		// The message is the body of the task
-		params := pollParams{Id: v.ID, Url: v.Url}
-		message, err := json.Marshal(params)
-		if err != nil {
-			log.Println(err)
-			return nil, err
-		}
-		task, err := tasks.CreateHTTPTask(projectID, locationID, queueID, endpointURL, message)
+		message := types.PollParams{Id: v.ID, Url: v.Url}
+		task, err := tasks.CreateHTTPTaskWithToken(projectID, locationID, queueID, endpointURL, &message)
 		if err != nil {
 			log.Println(err)
 			return nil, err
@@ -96,16 +92,25 @@ func (s *svc) EnqueuePollSites(ctx context.Context) ([]*cloudtaskspb.Task, error
 	return enqueued, nil
 }
 
-func (s *svc) PollSite(ctx context.Context, params pollParams) (*http.Response, error) {
+func (s *svc) PollSite(ctx context.Context, params types.PollParams) (*http.Response, error) {
 	url := params.Url
-	resp, err := http.Get(url)
+
+	timeout := 5 * time.Second
+	start := time.Now()
+	client := &http.Client{
+		Timeout: timeout,
+	}
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	end := time.Now()
+	latency := end.Sub(start)
+	msLatency := latency.Milliseconds()
 	// TO-DO: Add checking of return code to determine action
 	updateId := params.Id
-	_, err = s.updateSitePolled(ctx, updateId)
+	_, err = s.updateSitePolled(ctx, updateId, msLatency, resp.StatusCode)
 	if err != nil {
 		log.Println(err)
 		return nil, err
@@ -114,18 +119,18 @@ func (s *svc) PollSite(ctx context.Context, params pollParams) (*http.Response, 
 	return resp, nil
 }
 
-func (s *svc) FindSitesByID(ctx context.Context, params createIdParams) (repo.Site, error) {
+func (s *svc) FindSitesByID(ctx context.Context, params types.CreateIdParams) (repo.Site, error) {
 	id := params.Id
 	return s.repo.FindSitesByID(ctx, id)
 }
 
-func (s *svc) AddSite(ctx context.Context, params createAddParams) (int64, error) {
+func (s *svc) AddSite(ctx context.Context, params types.CreateAddParams) (int64, error) {
 	name := params.Name
 	url := params.Url
 	return s.repo.AddSite(ctx, repo.AddSiteParams{Name: name, Url: url})
 }
 
-func (s *svc) RemoveSite(ctx context.Context, params createIdParams) (string, error) {
+func (s *svc) RemoveSite(ctx context.Context, params types.CreateIdParams) (string, error) {
 	id := params.Id
 	return s.repo.RemoveSiteByID(ctx, id)
 }
